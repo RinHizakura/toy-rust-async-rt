@@ -1,3 +1,6 @@
+/* This is a simple implementation for thread parking and unparking.
+ * It looks like smol-rs has a more difficault design to handle more complicate
+ * concurrency: https://github.com/smol-rs/parking/blob/master/src/lib.rs */
 use std::sync::{Arc, Condvar, Mutex};
 
 pub struct Parker {
@@ -13,6 +16,14 @@ impl Parker {
             }),
         }
     }
+
+    pub fn park(&self) {
+        self.inner.park();
+    }
+
+    pub fn unpark(&self) {
+        self.inner.unpark();
+    }
 }
 
 struct Inner {
@@ -20,4 +31,18 @@ struct Inner {
     cvar: Condvar,
 }
 
-impl Inner {}
+impl Inner {
+    fn park(&self) {
+        let mut resumable = self.lock.lock().unwrap();
+        while !*resumable {
+            resumable = self.cvar.wait(resumable).unwrap();
+        }
+        *resumable = false;
+    }
+
+    fn unpark(&self) {
+        let mut resumable = self.lock.lock().unwrap();
+        *resumable = true;
+        self.cvar.notify_one();
+    }
+}
