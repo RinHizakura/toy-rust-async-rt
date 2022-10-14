@@ -28,11 +28,14 @@ impl ParkerVtable {
     }
 
     unsafe fn wake(ptr: *const ()) {
-        todo!();
+        let arc_parker = Arc::from_raw(ptr as *const Parker);
+        arc_parker.unpark();
     }
 
     unsafe fn wake_by_ref(ptr: *const ()) {
-        todo!();
+        /* Wake without consuming the reference */
+        let arc_parker = ManuallyDrop::new(Arc::from_raw(ptr as *const Parker));
+        arc_parker.unpark();
     }
 
     unsafe fn drop(ptr: *const ()) {
