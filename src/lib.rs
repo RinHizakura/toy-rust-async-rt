@@ -2,6 +2,7 @@ mod parking;
 
 use crate::parking::Parker;
 use std::future::Future;
+use std::mem::ManuallyDrop;
 use std::sync::Arc;
 use std::task::{RawWaker, RawWakerVTable, Waker};
 
@@ -19,7 +20,11 @@ impl ParkerVtable {
         RawWakerVTable::new(Self::clone, Self::wake, Self::wake_by_ref, Self::drop);
 
     unsafe fn clone(ptr: *const ()) -> RawWaker {
-        todo!();
+        /* Increase the reference count by clone.
+         * See https://doc.rust-lang.org/std/mem/fn.forget.html. */
+        let arc_parker = ManuallyDrop::new(Arc::from_raw(ptr as *const Parker));
+        let _ = arc_parker.clone();
+        RawWaker::new(ptr, &Self::VTABLE)
     }
 
     unsafe fn wake(ptr: *const ()) {
@@ -31,7 +36,10 @@ impl ParkerVtable {
     }
 
     unsafe fn drop(ptr: *const ()) {
-        todo!();
+        /* Decrease the reference count by drop. The destructor of Parker
+         * will be executed once the reference count decreased to zero. */
+        let arc_parker = Arc::from_raw(ptr as *const Parker);
+        drop(arc_parker);
     }
 }
 
