@@ -1,5 +1,5 @@
 [package]
-name = "toy-async-rust-rt"
+name = "toy-rust-async-rt"
 version = "0.1.0"
 edition = "2021"
 
