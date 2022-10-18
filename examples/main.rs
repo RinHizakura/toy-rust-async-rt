@@ -1,15 +1,16 @@
 use toy_rust_async_rt::executor;
+use toy_rust_async_rt::future::scheduler::Scheduler;
 use toy_rust_async_rt::future::yield_now;
 
 fn main() {
-    let task_a = async {
+    let a = async {
         for _ in 0..3 {
             let y = yield_now::yield_now();
             println!("TASK A");
             y.await;
         }
     };
-    let task_b = async {
+    let b = async {
         for _ in 0..3 {
             let y = yield_now::yield_now();
             println!("TASK B");
@@ -17,8 +18,11 @@ fn main() {
         }
     };
 
+    let mut sche = Scheduler::new();
+    sche.add(a);
+    sche.add(b);
+
     executor::block_on(async {
-        task_a.await;
-        task_b.await;
+        sche.await;
     })
 }
