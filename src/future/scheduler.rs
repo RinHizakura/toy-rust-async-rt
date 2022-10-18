@@ -12,8 +12,8 @@ use std::task::{Context, Poll};
  * https://dailydevsblog.com/troubleshoot/resolved-expected-async-block-found-a-different-async-block-146134/
  */
 
-/* TODO: The stupid author is not sure whether it could work without
- * pin_project. He should learn more about what pin_project is. */
+/* We use crate pin_project to simply seperate normal reference
+ * and pinned reference. */
 pin_project! {
     pub struct Scheduler<T> {
         #[pin]
