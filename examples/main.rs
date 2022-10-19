@@ -9,6 +9,7 @@ fn main() {
             println!("TASK A");
             y.await;
         }
+        "TASK A"
     };
     let b = async {
         for _ in 0..3 {
@@ -16,13 +17,16 @@ fn main() {
             println!("TASK B");
             y.await;
         }
+        "TASK B"
     };
 
     let mut sche = Scheduler::new();
-    sche.add(a);
-    sche.add(b);
+    let id_a = sche.add(a).ok().unwrap();
+    let id_b = sche.add(b).ok().unwrap();
 
     executor::block_on(async {
-        sche.await;
-    })
+        let outputs = sche.await;
+        assert_eq!(outputs[id_a], Some("TASK A"));
+        assert_eq!(outputs[id_b], Some("TASK B"));
+    });
 }

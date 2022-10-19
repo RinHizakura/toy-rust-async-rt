@@ -2,11 +2,12 @@
  * can achieve by creating each routine as a task which is a futrue, and bind
  * them to the same scheduler which is also a future. So once the scheduler
  * is awaited, it will poll each underlying task and wake any if it is ready. */
+use anyhow::{anyhow, Result};
 use pin_project_lite::pin_project;
+use std::collections::VecDeque;
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-
 /* Each of the async blocks are treated as a different type. Since all of them implements
  * Future, we have to actually dynamically dispatch them:
  * https://dailydevsblog.com/troubleshoot/resolved-expected-async-block-found-a-different-async-block-146134/
@@ -17,28 +18,36 @@ use std::task::{Context, Poll};
 pin_project! {
     pub struct Scheduler<T> {
         #[pin]
-        tasks: Vec<Pin<Box<dyn Future<Output = T>>>>,
-        outputs: Vec<Option<T>>,
+        tasks: VecDeque<Pin<Box<dyn Future<Output = T>>>>,
+        task_id: usize,
+        outputs: VecDeque<Option<T>>,
     }
 }
 
 impl<T> Scheduler<T> {
     pub fn new() -> Self {
         Scheduler {
-            tasks: vec![],
-            outputs: vec![],
+            tasks: VecDeque::new(),
+            task_id: 0,
+            outputs: VecDeque::new(),
         }
     }
 
     // TODO: take a deeper look at the lifetime
-    pub fn add(&mut self, task: impl Future<Output = T> + 'static) {
-        self.tasks.push(Box::pin(task));
-        self.outputs.push(None);
+    pub fn add(&mut self, task: impl Future<Output = T> + 'static) -> Result<usize> {
+        if self.task_id == usize::MAX {
+            return Err(anyhow!("Too many task to add in the scheduler"));
+        }
+        self.tasks.push_back(Box::pin(task));
+        self.outputs.push_back(None);
+        let id = self.task_id;
+        self.task_id += 1;
+        Ok(id)
     }
 }
 
 impl<T> Future for Scheduler<T> {
-    type Output = ();
+    type Output = Vec<Option<T>>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
         let mut this = self.project();
@@ -57,7 +66,12 @@ impl<T> Future for Scheduler<T> {
         }
 
         if ready {
-            Poll::Ready(())
+            let mut outputs = Vec::new();
+            // FIXME: possibly optimization?
+            while let (Some(v), Some(_)) = (this.outputs.pop_front(), this.tasks.pop_front()) {
+                outputs.push(v);
+            }
+            Poll::Ready(outputs)
         } else {
             Poll::Pending
         }
