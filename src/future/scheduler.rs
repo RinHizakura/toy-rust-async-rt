@@ -44,21 +44,19 @@ impl<T> Future for Scheduler<T> {
         let mut this = self.project();
         let len = this.tasks.len();
 
-        let mut ready_task = 0;
+        let mut ready = true;
         for i in 0..len {
             /* the related task is completed */
-            if this.outputs[i].is_some() {
-                ready_task += 1;
-                continue;
-            }
-
-            if let Poll::Ready(out) = this.tasks[i].as_mut().poll(cx) {
-                this.outputs[i] = Some(out);
-                ready_task += 1;
+            if this.outputs[i].is_none() {
+                if let Poll::Ready(out) = this.tasks[i].as_mut().poll(cx) {
+                    this.outputs[i] = Some(out);
+                } else {
+                    ready = false;
+                }
             }
         }
 
-        if ready_task == len {
+        if ready {
             Poll::Ready(())
         } else {
             Poll::Pending
