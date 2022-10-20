@@ -11,6 +11,7 @@ impl Future for YieldNow {
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
         if !self.0 {
             self.0 = true;
+            // wake to force the next polling
             cx.waker().wake_by_ref();
             Poll::Pending
         } else {
