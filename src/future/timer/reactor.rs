@@ -1,9 +1,9 @@
 use anyhow::{anyhow, Result};
+use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, Once};
 use std::task::Waker;
 use std::thread::Builder;
-use std::time::Instant;
-use std::collections::BTreeMap;
+use std::time::{Duration, Instant};
 
 /* FIXME: To be simple, we just use a big lock on the whole structure.
  * We should lock each member in the structure independently instead
@@ -23,7 +23,7 @@ fn init_timer_thread() {
 fn main_loop() {
     loop {
         let mut lock = global_reactor().unwrap().try_lock();
-        if let Ok(ref reactor) = lock {
+        if let Ok(ref mut reactor) = lock {
             reactor.react();
         }
     }
@@ -56,17 +56,38 @@ pub struct Reactor {
 
 impl Reactor {
     pub fn new() -> Self {
-        Reactor { next_id: 0, timers: BTreeMap::new() }
+        Reactor {
+            next_id: 0,
+            timers: BTreeMap::new(),
+        }
     }
 
     pub fn insert_timer(&mut self, next_time: Instant, waker: &Waker) -> usize {
+        /* give every timer an unique id to distinguish them in the BTreeMap if
+         * they have same expired time */
         let id = self.next_id;
         self.timers.insert((next_time, id), waker.clone());
         self.next_id += 1;
         id
     }
 
-    pub fn react(&self) {
-        todo!()
+    fn process_timers(&mut self, wakers: &mut Vec<Waker>) -> Option<Duration> {
+        let now = Instant::now();
+
+        // split the tree into the expired and non-expired timer
+        let after_now = self.timers.split_off(&(now + Duration::from_nanos(1), 0));
+        /* The non-expired timer will be leaved in the Reactor struct. The
+         * expired timer will be waked. */
+        let before_now = std::mem::replace(&mut self.timers, after_now);
+        todo!();
+    }
+
+    pub fn react(&mut self) {
+        let mut wakers = Vec::new();
+        let next_timer = self.process_timers(&mut wakers);
+        for waker in wakers {
+            waker.wake();
+        }
+        todo!();
     }
 }
