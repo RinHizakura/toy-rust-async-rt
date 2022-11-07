@@ -71,6 +71,10 @@ impl Reactor {
         id
     }
 
+    pub fn remove_timer(&mut self, next_time: Instant, id: usize) {
+        self.timers.remove(&(next_time, id));
+    }
+
     fn process_timers(&mut self, wakers: &mut Vec<Waker>) {
         let now = Instant::now();
 

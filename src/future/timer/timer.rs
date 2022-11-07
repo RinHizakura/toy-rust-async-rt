@@ -60,7 +60,11 @@ impl Stream for Timer {
         let this = self.get_mut();
         if Instant::now() >= this.next_time {
             // if the timer already expired
-            todo!();
+            let reactor = &mut *global_reactor().unwrap().lock().unwrap();
+            if let Some(id) = this.id {
+                reactor.remove_timer(this.next_time, id);
+            }
+            return Poll::Ready(Some(this.next_time));
         } else {
             // if we have to wait until the timer expired
             match this.id {
