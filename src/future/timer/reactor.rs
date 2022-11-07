@@ -71,23 +71,25 @@ impl Reactor {
         id
     }
 
-    fn process_timers(&mut self, wakers: &mut Vec<Waker>) -> Option<Duration> {
+    fn process_timers(&mut self, wakers: &mut Vec<Waker>) {
         let now = Instant::now();
 
         // split the tree into the expired and non-expired timer
         let after_now = self.timers.split_off(&(now + Duration::from_nanos(1), 0));
         /* The non-expired timer will be leaved in the Reactor struct. The
          * expired timer will be waked. */
-        let before_now = std::mem::replace(&mut self.timers, after_now);
-        todo!();
+        let now_and_before_now = std::mem::replace(&mut self.timers, after_now);
+
+        for (_, waker) in now_and_before_now {
+            wakers.push(waker);
+        }
     }
 
     pub fn react(&mut self) {
         let mut wakers = Vec::new();
-        let next_timer = self.process_timers(&mut wakers);
+        self.process_timers(&mut wakers);
         for waker in wakers {
             waker.wake();
         }
-        todo!();
     }
 }

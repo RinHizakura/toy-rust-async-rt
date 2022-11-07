@@ -4,6 +4,6 @@ use toy_rust_async_rt::future::timer::Timer;
 
 fn main() {
     executor::block_on(async {
-        Timer::after(Duration::from_secs(1)).unwrap().await;
+        Timer::after(Duration::from_secs(5)).unwrap().await;
     });
 }

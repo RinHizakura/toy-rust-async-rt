@@ -67,10 +67,11 @@ impl Stream for Timer {
                 Some(_) => panic!("We don't expect to poll a timer with id"),
                 None => {
                     let reactor = &mut *global_reactor().unwrap().lock().unwrap();
-                    let id = reactor.insert_timer(this.next_time, cx.waker());
-                    todo!();
+                    this.id = Some(reactor.insert_timer(this.next_time, cx.waker()));
                 }
             }
         }
+
+        Poll::Pending
     }
 }
